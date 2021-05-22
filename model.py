@@ -34,7 +34,7 @@ class align(nn.Module):
     
 
 class tcn_layer(nn.Module):
-    def __init__(self, kt, c_in, c_out, act="GLU", dropout = 0.1):
+    def __init__(self, kt, c_in, c_out, act="linear", dropout = 0.1): # not necessary to use GLU for Kriging, actually linear activation is slightly better.
         super(tcn_layer, self).__init__()
         self.kt = kt
         self.act = act
