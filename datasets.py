@@ -71,7 +71,7 @@ def metr_La_processing(training_rate, sample_rate, missing_rate, seq_length, t_o
     full_set = set(range(0,X.shape[0]))        
     know_set = full_set - unknow_set
     
-    split_line1 = int(X.shape[1] * 0.7)
+    split_line1 = int(X.shape[1] * training_rate)
 
     training_set = X[list(know_set), :split_line1]
     test_set = X[:, split_line1:]
