@@ -3,7 +3,7 @@ We present SATCN---Spatial Aggregation and Temporal Convolution Networks---a uni
 
 ## Model framework
 
-![The model framework](https://github.com/Kaimaoge/SATCN/raw/master/whole_framework-1.png)
+<img src="https://github.com/Kaimaoge/SATCN/blob/master/whole_framework-1.png" width="800">
 
 ## Paper
 [Wu, Y., Zhuang, D., Lei, M., Labbe, A., & Sun, L. (2021). Spatial Aggregation and Temporal Convolution Networks for Real-time Kriging. arXiv preprint arXiv:2109.12144.](https://arxiv.org/pdf/2109.12144.pdf)
