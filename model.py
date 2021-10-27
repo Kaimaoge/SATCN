@@ -34,7 +34,7 @@ class align(nn.Module):
     
 
 class tcn_layer(nn.Module):
-    def __init__(self, kt, c_in, c_out, act="linear", dropout = 0.1): # not necessary to use GLU for Kriging, actually linear activation is slightly better.
+    def __init__(self, kt, c_in, c_out, act="linear", dropout = 0.1):
         super(tcn_layer, self).__init__()
         self.kt = kt
         self.act = act
@@ -203,3 +203,21 @@ class general_satcn(nn.Module):
             x = self.t_convs[i](x)
         y = self.out_conv(x)
         return y
+    
+class single_satcn(nn.Module):
+
+    def __init__(self, avg_d, device, in_variables = 1, channels=32, t_kernel = 2, aggragators = ['mean', 'softmin', 'softmax', 'normalised_mean', 'std'], 
+                 scalers = ['identity', 'amplification', 'attenuation'], masking = True, dropout = 0):
+        super(single_satcn, self).__init__()
+        self.s_layer0 = STower(in_variables, channels, aggragators + ['distance','d_std'], ['identity'],avg_d, device, masking, dropout)
+        self.t_layer0 = tcn_layer(t_kernel, channels, channels, dropout)
+        self.s_convs = nn.ModuleList()
+        self.t_convs = nn.ModuleList()
+        self.out_conv = nn.Conv2d(channels, in_variables, (1, 1), 1)
+        
+    def forward(self, x, Lk, Lk_mask):
+        x = self.s_layer0(x, Lk_mask)
+        x = self.t_layer0(x)
+        y = self.out_conv(x)
+        return y
+#KCN-SAGE is built upon SAGE class. I will update it in the future
