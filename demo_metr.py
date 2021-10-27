@@ -18,20 +18,21 @@ from loss import masked_rmse, masked_mae
 Hyper parameters
 '''
 device = 'cuda'
-training_rate = 0.7 # training time ratio
-sample_rate = 0.2 # number of missing node
-missing_rate = 0 # MIssing data in the observed sensors
+training_rate = 0.5 # training time ratio
+sample_rate = 0.5 # number of missing node
+missing_rate = 0# MIssing data in the observed sensors
 seq_length = 6 # INput length of the sequence
 
 layers = 1 # number of unmasked spatial aggregation and temporal convolution
 t_kernel = 2 # the length of temporal convolution kernel
-least_k = 3 # the number of neighbors
-N_v = 10 # the number of masked nodes for training
+least_k = 2 # the number of neighbors
+N_v = 20 # the number of masked nodes for training
 
 batch_size = 8 # training batch size
-episode = 200 # max training epoch
+episode = 20 # max training epoch
+channels = 128
 
-
+#scalers = ['identity']
 
 
 '''
@@ -47,7 +48,7 @@ realy = torch.Tensor(Tedata['y'][:, :, :, Tedata['u']]).to('cuda')
 Atra2 = sadj_transform(Tradata['A2'], least_k)
 Ate2 = sadj_transform(Tedata['A2'], least_k)
 avg_d = {}
-avg_d['log'] = torch.tensor(np.mean(np.log(np.sum(Atra2, axis = 0)) + 1))
+avg_d['log'] = torch.tensor(np.mean(np.log(np.sum(Atra2, axis = 0) +1)))
 
 Traloader = TraDataLoader(Tradata['x'], Tradata['A1'], batch_size)
 Teloader = TeDataLoader(Tedata['x'], Tedata['y'], Tedata['A1'])
@@ -57,7 +58,7 @@ Scaler = ZerooneScaler(Tradata['x'].max())
 '''
 Define model
 '''
-metr_kriging = general_satcn(avg_d, device, layers = layers, t_kernel = t_kernel) # very simple model, without tuning feature number aggregation, scaler
+metr_kriging = general_satcn(avg_d, device, layers = layers, t_kernel = t_kernel, channels = channels) # very simple model, without tuning feature number aggregation, scaler
 metr_kriging.to(device)
 optimizer = optim.Adam(metr_kriging.parameters(), lr=0.001, weight_decay=0.0001)
 
@@ -87,6 +88,8 @@ for i in range(1, episode+1):
         optimizer.step()
         train_loss.append(loss.item())
         
+        
+        #if iter % 50 == 0:
     output = []
     
     print("start testing...",flush=True)
@@ -116,7 +119,42 @@ for i in range(1, episode+1):
         best_model = copy.deepcopy(metr_kriging.state_dict())
 
 metr_kriging.load_state_dict(best_model)
-torch.save(metr_kriging, 'metr_la' + str(training_rate) + str(sample_rate) + str(layers) + '.pth')
+torch.save(metr_kriging, 'metr_la' + str(training_rate) + str(sample_rate) + str(layers) + str(least_k) + str(missing_rate) + str(channels) + '.pth')
+            
+            
+b = torch.ones(8,)
+for i in range(8):
+    b[i] = MAE_list[12+i]
+   
+MAE_mean = torch.mean(b)
+MAE_std = torch.std(b)
+
+log = 'mean MAE: {:.4f}, std MAE: {:.4f}'
+print(log.format(MAE_mean,MAE_std))
+
+metr_kriging = torch.load('metr_la0.50.5120128.pth')
+
+output = []
+print("start testing...",flush=True)
+for iter, (x, A, y) in enumerate(Teloader.get_iterator()):
+    x, y = Scaler.transform(x), Scaler.transform(y) 
+    testx = torch.Tensor(x).to(device)
+    testy = torch.Tensor(y).to(device)
+    Ate1 = torch.Tensor(A).to(device)
+    metr_kriging.eval()
+    with torch.no_grad():
+        pred = metr_kriging(testx, Ate2, Ate1)
+        pred = Scaler.inverse_transform(pred)
+    output.append(pred[:, :, :, Tedata['u']])
+    
+yhat = torch.cat(output,dim=0)
+yhat = yhat[:realy.size(0),...]
+
+test_mae = masked_mae(yhat, realy, 0)
+test_rmse = masked_rmse(yhat, realy, 0)
+
+log = 'Test MAE: {:.4f}, Test RMSE: {:.4f}'
+print(log.format(test_mae,test_rmse))  
             
             
             
